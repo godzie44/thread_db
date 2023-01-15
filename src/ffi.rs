@@ -186,11 +186,11 @@ pub struct ProcHandle {
 }
 
 impl ProcHandle {
-    pub fn new(pid: Pid) -> ProcHandle {
-        ProcHandle {
+    pub fn new(pid: Pid) -> io::Result<ProcHandle> {
+        Ok(ProcHandle {
             pid,
-            symbols: Self::extract_symbols(pid).unwrap(),
-        }
+            symbols: Self::extract_symbols(pid)?,
+        })
     }
 
     fn extract_symbols(pid: Pid) -> io::Result<SymbolMapping> {

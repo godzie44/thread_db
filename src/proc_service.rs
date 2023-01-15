@@ -261,7 +261,7 @@ mod tests {
                 sys::wait::waitpid(child, Some(WaitPidFlag::WSTOPPED)).unwrap();
 
                 unsafe {
-                    let mut handle = ProcHandle::new(child);
+                    let mut handle = ProcHandle::new(child).unwrap();
                     let mut result: u64 = 0;
                     assert_eq!(
                         ps_pdread(
@@ -346,7 +346,7 @@ mod tests {
                 std::process::exit(0)
             }
             ForkResult::Parent { child } => {
-                let mut handle = ProcHandle::new(child);
+                let mut handle = ProcHandle::new(child).unwrap();
 
                 sys::wait::waitpid(child, Some(WaitPidFlag::WSTOPPED)).unwrap();
 

@@ -7,9 +7,9 @@ use crate::ffi::{
 use dlopen::wrapper::Container;
 use nix::libc;
 use nix::unistd::Pid;
-use std::mem;
 use std::mem::MaybeUninit;
 use std::pin::Pin;
+use std::{io, mem};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ThreadDbError {
@@ -17,6 +17,8 @@ pub enum ThreadDbError {
     LibError(TdErr),
     #[error(transparent)]
     LoadError(#[from] dlopen::Error),
+    #[error("make process handle error: {0}")]
+    ProcHandleError(#[from] io::Error),
 }
 
 pub type Result<T> = std::result::Result<T, ThreadDbError>;
@@ -48,7 +50,7 @@ impl Lib {
     }
 
     pub fn attach(&self, process_pid: Pid) -> Result<Process> {
-        let mut proc_handle = Box::pin(ProcHandle::new(process_pid));
+        let mut proc_handle = Box::pin(ProcHandle::new(process_pid)?);
         let mut thread_agent: *mut TdThrAgent = std::ptr::null_mut();
 
         unsafe {
