@@ -2,6 +2,11 @@
 name = "thread_db"
 version = "0.1.0"
 edition = "2021"
+description = "Rust wrapper for libthread_db."
+license = "MIT"
+repository = "https://github.com/godzie44/thread_db"
+readme = "./README.md"
+authors = ["Konstantin Derevtsov <godzie@yandex.ru>"]
 
 [dependencies]
 nix = "0.26.1"
