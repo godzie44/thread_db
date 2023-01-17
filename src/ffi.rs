@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use dlopen::wrapper::WrapperApi;
 use dlopen_derive::WrapperApi;
 use nix::libc;
@@ -233,7 +235,6 @@ fn extract_symbols_from_lib(
     Ok(symbols)
 }
 
-#[allow(clippy::too_many_arguments)]
 #[derive(WrapperApi)]
 pub struct ThreadDb {
     /// Initialize the thread debug support library.
