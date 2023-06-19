@@ -1,9 +1,10 @@
 use crate::ffi::{ProcHandle, PsAddr};
 use nix::errno::Errno::ESRCH;
-use nix::libc::{uintptr_t, user_regs_struct};
+use nix::libc::user_regs_struct;
 use nix::unistd::Pid;
 use nix::{libc, sys};
 use std::ffi::{c_long, c_void, CStr};
+use std::ptr;
 
 /// Implementation of /usr/include/proc_service.h
 ///
@@ -45,17 +46,20 @@ pub unsafe extern "C" fn ps_getpid(handle: *mut ProcHandle) -> i32 {
 
 fn read(
     pid: Pid,
-    mut source_ptr: *mut usize,
-    mut target_ptr: *mut usize,
+    mut source_ptr: *mut c_void,
+    mut target_ptr: *mut c_void,
     mut size: usize,
 ) -> nix::Result<()> {
     let single_read_size = std::mem::size_of::<c_long>();
     loop {
-        let data = sys::ptrace::read(pid, source_ptr as *mut c_void)?;
-
+        let data = sys::ptrace::read(pid, source_ptr)?;
         unsafe {
             if size > single_read_size {
-                *target_ptr = data as usize;
+                std::ptr::copy_nonoverlapping(
+                    &data as *const _ as *const u8,
+                    target_ptr as *mut u8,
+                    single_read_size,
+                );
             } else {
                 std::ptr::copy_nonoverlapping(
                     &data as *const _ as *const u8,
@@ -65,8 +69,8 @@ fn read(
                 break;
             }
 
-            target_ptr = target_ptr.add(1);
-            source_ptr = source_ptr.add(1);
+            target_ptr = target_ptr.add(single_read_size);
+            source_ptr = source_ptr.add(single_read_size);
             size -= single_read_size;
         }
     }
@@ -81,29 +85,23 @@ pub unsafe extern "C" fn ps_pdread(
     addr: *mut libc::c_void,
     size: usize,
 ) -> PsErr {
-    let source_ptr = ps_addr as *mut usize;
-    let target_ptr = addr as *mut usize;
-
-    read((*handle).pid, source_ptr, target_ptr, size).into()
+    read((*handle).pid, ps_addr, addr, size).into()
 }
 
 fn write(
     pid: Pid,
-    mut target_ptr: *mut usize,
-    mut source_ptr: *mut usize,
+    mut target_ptr: *mut c_void,
+    mut source_ptr: *mut c_void,
     mut size: usize,
 ) -> nix::Result<()> {
     let single_write_size = std::mem::size_of::<c_long>();
     unsafe {
         while size >= single_write_size {
-            sys::ptrace::write(
-                pid,
-                target_ptr as *mut c_void,
-                (*source_ptr) as uintptr_t as *mut c_void,
-            )?;
+            let word = ptr::read_unaligned(source_ptr as *mut c_long);
+            sys::ptrace::write(pid, target_ptr, word as *mut c_void)?;
 
-            target_ptr = target_ptr.add(1);
-            source_ptr = source_ptr.add(1);
+            target_ptr = target_ptr.add(single_write_size);
+            source_ptr = source_ptr.add(single_write_size);
             size -= single_write_size;
         }
 
@@ -114,7 +112,7 @@ fn write(
                 &mut data as *mut _ as *mut u8,
                 size,
             );
-            sys::ptrace::write(pid, target_ptr as *mut c_void, data as *mut c_void)?
+            sys::ptrace::write(pid, target_ptr, data as *mut c_void)?
         }
     }
 
@@ -128,9 +126,7 @@ pub unsafe extern "C" fn ps_pdwrite(
     addr: *mut c_void,
     size: usize,
 ) -> PsErr {
-    let target_ptr = ps_addr as *mut usize;
-    let source_ptr = addr as *mut usize;
-    write((*handle).pid, target_ptr, source_ptr, size).into()
+    write((*handle).pid, ps_addr, addr, size).into()
 }
 
 #[no_mangle]
