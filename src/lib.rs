@@ -1,4 +1,5 @@
 pub mod ffi;
+pub use nix::unistd::Pid;
 mod proc_service;
 
 use crate::ffi::{
@@ -6,7 +7,6 @@ use crate::ffi::{
 };
 use dlopen::wrapper::Container;
 use nix::libc;
-use nix::unistd::Pid;
 use std::mem::MaybeUninit;
 use std::pin::Pin;
 use std::{io, mem};

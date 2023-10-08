@@ -106,7 +106,7 @@ fn write(
         }
 
         if size > 0 {
-            let mut data = sys::ptrace::read(pid, target_ptr as *mut c_void)?;
+            let mut data = sys::ptrace::read(pid, target_ptr)?;
             std::ptr::copy_nonoverlapping(
                 source_ptr as *const u8,
                 &mut data as *mut _ as *mut u8,
